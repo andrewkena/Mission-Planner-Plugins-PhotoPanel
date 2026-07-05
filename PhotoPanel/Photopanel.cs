@@ -145,7 +145,7 @@ namespace PhotoPanelTabPlugin
             }
             TabControl tc = (TabControl)found[0];
 
-            _tab = new TabPage("Фото");
+            _tab = new TabPage("PhotoPanel 1.2");
             _tab.BackColor = Color.FromArgb(38, 39, 40);
             _tab.AutoScroll = true; // если блок ниже по высоте — появится прокрутка
 
