@@ -165,7 +165,7 @@ namespace PhotoPanelTabPlugin
             }
             TabControl tc = (TabControl)found[0];
 
-            _tab = new TabPage("PhotoPanel 1.21_10.07.2026");
+            _tab = new TabPage("PhotoPanel");
             _tab.BackColor = Color.FromArgb(38, 39, 40);
             _tab.AutoScroll = true; // если блок ниже по высоте — появится прокрутка
 
@@ -231,27 +231,26 @@ namespace PhotoPanelTabPlugin
             y += 25;
             _lblWpDist = MakeLabel("Расстояние до следующего WP: —", normal, 10, y);
 
-            y += 30;
-            Label line5 = MakeLine(y);
+            Label lineV = MakeVLine(355, 10, 340);
 
-            y += 15;
+            int ry = 10;
             Button btnStartTime = new Button();
             btnStartTime.Text = "Фото по времени";
-            btnStartTime.Location = new Point(10, y);
-            btnStartTime.Size = new Size(150, 28);
+            btnStartTime.Location = new Point(370, ry);
+            btnStartTime.Size = new Size(170, 30);
             btnStartTime.FlatStyle = FlatStyle.Flat;
             btnStartTime.ForeColor = Color.WhiteSmoke;
 
             NumericUpDown nudTime = new NumericUpDown();
-            nudTime.Location = new Point(170, y + 3);
-            nudTime.Size = new Size(60, 22);
+            nudTime.Location = new Point(370, ry + 36);
+            nudTime.Size = new Size(70, 24);
             nudTime.DecimalPlaces = 1;
             nudTime.Increment = 0.1M;
-            nudTime.Minimum = 1.5M;
+            nudTime.Minimum = 1M;
             nudTime.Maximum = 300M;
             nudTime.Value = 1.5M;
 
-            Label lblTimeUnit = MakeLabel("с", normal, 236, y + 4);
+            Label lblTimeUnit = MakeLabel("с", normal, 448, ry + 39);
 
             btnStartTime.Click += delegate
             {
@@ -263,24 +262,24 @@ namespace PhotoPanelTabPlugin
                 catch (Exception ex) { Console.WriteLine("PhotoPanel: старт по времени — " + ex.Message); }
             };
 
-            y += 34;
+            ry += 76;
             Button btnStartDist = new Button();
             btnStartDist.Text = "Фото по расстоянию";
-            btnStartDist.Location = new Point(10, y);
-            btnStartDist.Size = new Size(150, 28);
+            btnStartDist.Location = new Point(370, ry);
+            btnStartDist.Size = new Size(170, 30);
             btnStartDist.FlatStyle = FlatStyle.Flat;
             btnStartDist.ForeColor = Color.WhiteSmoke;
 
             NumericUpDown nudDist = new NumericUpDown();
-            nudDist.Location = new Point(170, y + 3);
-            nudDist.Size = new Size(60, 22);
+            nudDist.Location = new Point(370, ry + 36);
+            nudDist.Size = new Size(70, 24);
             nudDist.DecimalPlaces = 0;
             nudDist.Increment = 1M;
             nudDist.Minimum = 50M;
             nudDist.Maximum = 10000M;
             nudDist.Value = 50M;
 
-            Label lblDistUnit = MakeLabel("м", normal, 236, y + 4);
+            Label lblDistUnit = MakeLabel("м", normal, 448, ry + 39);
 
             btnStartDist.Click += delegate
             {
@@ -292,13 +291,15 @@ namespace PhotoPanelTabPlugin
                 catch (Exception ex) { Console.WriteLine("PhotoPanel: старт по расстоянию — " + ex.Message); }
             };
 
-            y += 34;
+            ry += 76;
             Button btnStop = new Button();
             btnStop.Text = "Остановить фото";
-            btnStop.Location = new Point(10, y);
-            btnStop.Size = new Size(220, 28);
+            btnStop.Location = new Point(370, ry);
+            btnStop.Size = new Size(170, 40);
             btnStop.FlatStyle = FlatStyle.Flat;
-            btnStop.ForeColor = Color.WhiteSmoke;
+            btnStop.BackColor = Color.Red;
+            btnStop.ForeColor = Color.White;
+            btnStop.Font = new Font(normal, FontStyle.Bold);
             btnStop.Click += delegate
             {
                 try
@@ -310,6 +311,9 @@ namespace PhotoPanelTabPlugin
                 }
                 catch (Exception ex) { Console.WriteLine("PhotoPanel: остановка — " + ex.Message); }
             };
+
+            Label lblVersion = MakeLabel("v" + Version, new Font("Segoe UI", 8), 10, 272);
+            lblVersion.ForeColor = Color.Gray;
 
             _tab.Controls.Add(caption);
             _tab.Controls.Add(_lblCount);
@@ -327,7 +331,7 @@ namespace PhotoPanelTabPlugin
             _tab.Controls.Add(line4);
             _tab.Controls.Add(_lblCurWp);
             _tab.Controls.Add(_lblWpDist);
-            _tab.Controls.Add(line5);
+            _tab.Controls.Add(lineV);
             _tab.Controls.Add(btnStartTime);
             _tab.Controls.Add(nudTime);
             _tab.Controls.Add(lblTimeUnit);
@@ -335,6 +339,7 @@ namespace PhotoPanelTabPlugin
             _tab.Controls.Add(nudDist);
             _tab.Controls.Add(lblDistUnit);
             _tab.Controls.Add(btnStop);
+            _tab.Controls.Add(lblVersion);
 
             tc.TabPages.Add(_tab);
         }
@@ -346,6 +351,17 @@ namespace PhotoPanelTabPlugin
             l.Height = 2;
             l.Width = 335;
             l.Location = new Point(10, y);
+            l.BorderStyle = BorderStyle.Fixed3D;
+            return l;
+        }
+
+        private Label MakeVLine(int x, int y, int height)
+        {
+            Label l = new Label();
+            l.AutoSize = false;
+            l.Width = 2;
+            l.Height = height;
+            l.Location = new Point(x, y);
             l.BorderStyle = BorderStyle.Fixed3D;
             return l;
         }
@@ -384,18 +400,17 @@ namespace PhotoPanelTabPlugin
 
             _lblCount.Text = count.ToString();
 
+            CurrentState cs = Host.cs;
+            _lblPhotoTime.Text = string.Format("Время: {0}", FormatFlightTime(cs.timeInAir));
+
             if (t == DateTime.MinValue)
             {
-                _lblPhotoTime.Text = "Время: —";
                 _lblLastPhoto.Text = "Последнее фото: —";
             }
             else
             {
-                _lblPhotoTime.Text = string.Format("Время: {0:HH:mm:ss}", t);
                 _lblLastPhoto.Text = string.Format("Последнее фото: {0:F6}, {1:F6}", lat, lng);
             }
-
-            CurrentState cs = Host.cs;
 
             if (t == DateTime.MinValue)
                 _lblAlt.Text = "Высота последнего снимка: —";
@@ -423,6 +438,14 @@ namespace PhotoPanelTabPlugin
 
             _lblCurWp.Text = string.Format("Следующий WP: {0}", cs.wpno);
             _lblWpDist.Text = string.Format("Расстояние до следующего WP: {0:F0} м", cs.wp_dist);
+        }
+
+        // Время полёта (Host.cs.timeInAir, сек) в формате ЧЧ:ММ:СС
+        private static string FormatFlightTime(float seconds)
+        {
+            if (seconds < 0) seconds = 0;
+            TimeSpan ts = TimeSpan.FromSeconds(seconds);
+            return string.Format("{0:00}:{1:00}:{2:00}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
         }
 
         // Расстояние между двумя точками (гаверсинус), метры
