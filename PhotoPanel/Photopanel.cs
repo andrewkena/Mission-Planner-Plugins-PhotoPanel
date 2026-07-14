@@ -38,6 +38,15 @@ namespace PhotoPanelTabPlugin
         private double _vdop = -1;
         private object _lock = new object();
 
+        // резервный счётчик по CAMERA_CAPTURE_STATUS.image_count — CAMERA_FEEDBACK
+        // может "теряться" в потоке телеметрии при частых кадрах (особенно у
+        // MAV_CMD_IMAGE_START_CAPTURE без физического пина обратной связи камеры),
+        // поэтому в итоговом счётчике берём максимум из двух источников
+        private int _fcImageCountRaw = 0;
+        private int _fcCountBaseline = 0;
+        private bool _fcCountReceived = false;
+        private int _fcCount = 0;
+
         public override string Name { get { return "Photo Panel Tab"; } }
         public override string Version { get { return "1.22_10.07.2026"; } }
         public override string Author { get { return "andrewkena"; } }
@@ -99,6 +108,36 @@ namespace PhotoPanelTabPlugin
                     (byte)Host.comPort.sysidcurrent,
                     (byte)Host.comPort.compidcurrent,
                     false);
+
+                // CAMERA_CAPTURE_STATUS — счётчик image_count от автопилота,
+                // резерв на случай потерь CAMERA_FEEDBACK в потоке телеметрии
+                Host.comPort.SubscribeToPacketType(
+                    MAVLink.MAVLINK_MSG_ID.CAMERA_CAPTURE_STATUS,
+                    delegate(MAVLink.MAVLinkMessage message)
+                    {
+                        MAVLink.mavlink_camera_capture_status_t st =
+                            (MAVLink.mavlink_camera_capture_status_t)message.data;
+                        lock (_lock)
+                        {
+                            if (!_fcCountReceived)
+                            {
+                                _fcCountBaseline = st.image_count;
+                                _fcCountReceived = true;
+                            }
+                            _fcImageCountRaw = st.image_count;
+                            _fcCount = Math.Max(0, _fcImageCountRaw - _fcCountBaseline);
+                        }
+                        return true;
+                    },
+                    (byte)Host.comPort.sysidcurrent,
+                    (byte)Host.comPort.compidcurrent,
+                    false);
+
+                // по умолчанию автопилот не стримит CAMERA_CAPTURE_STATUS сам —
+                // запрашиваем раз в секунду
+                Host.comPort.doCommand((byte)Host.comPort.sysidcurrent, (byte)Host.comPort.compidcurrent,
+                    MAVLink.MAV_CMD.SET_MESSAGE_INTERVAL,
+                    (float)MAVLink.MAVLINK_MSG_ID.CAMERA_CAPTURE_STATUS, 1000000, 0, 0, 0, 0, 0, false);
 
                 // Вкладка создаётся в главном потоке
                 MainV2.instance.BeginInvoke((MethodInvoker)delegate
@@ -189,6 +228,8 @@ namespace PhotoPanelTabPlugin
                 lock (_lock)
                 {
                     _photoCount = 0;
+                    _fcCountBaseline = _fcImageCountRaw;
+                    _fcCount = 0;
                     _lastPhotoTime = DateTime.MinValue;
                     _lastAlt = 0;
                     _sumDtSec = 0;
@@ -382,12 +423,13 @@ namespace PhotoPanelTabPlugin
         {
             if (_lblCount == null) return;
 
-            int count, intervals;
+            int count, fcCount, intervals;
             double lat, lng, alt, sumDt, sumDist, vdop;
             DateTime t;
             lock (_lock)
             {
                 count = _photoCount;
+                fcCount = _fcCount;
                 lat = _lastLat;
                 lng = _lastLng;
                 alt = _lastAlt;
@@ -398,7 +440,7 @@ namespace PhotoPanelTabPlugin
                 vdop = _vdop;
             }
 
-            _lblCount.Text = count.ToString();
+            _lblCount.Text = Math.Max(count, fcCount).ToString();
 
             CurrentState cs = Host.cs;
             _lblPhotoTime.Text = string.Format("Время: {0}", FormatFlightTime(cs.timeInAir));
